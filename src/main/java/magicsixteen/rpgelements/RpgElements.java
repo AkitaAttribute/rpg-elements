@@ -223,7 +223,6 @@ public class RpgElements {
             Entity entity = event.getEntityLiving();
             if (glowHelper.removeGlowing(entity)) {
                 entity.setGlowing(false);
-                //entity.set
                 messageAllPlayers("Attempted to remove glowing. [Glowing][" + entity.isGlowing() + "][UUID]["
                         + entity.getUniqueID() + "]");
             }
