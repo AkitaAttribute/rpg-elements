@@ -29,8 +29,8 @@ public class GlowHelper {
         long moddedTimeStamp = getCurrentTimeStampPlusSeconds(seconds);
 
         //messageAllPlayers("Adding [" + entity.toString() + "]");
-        messageAllPlayers("Attempted to add glowing. [Glowing][" + entity.isGlowing() + "][UUID]["
-                + entity.getUniqueID() + "]");
+        /*messageAllPlayers("Attempted to add glowing. [Glowing][" + entity.isGlowing() + "][UUID]["
+                + entity.getUniqueID() + "]");*/
         glowingEntities.put(entity.getUniqueID(), moddedTimeStamp);
     }
 

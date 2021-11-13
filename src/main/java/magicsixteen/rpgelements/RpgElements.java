@@ -120,6 +120,8 @@ public class RpgElements {
 
         if(source.getTrueSource() instanceof PlayerEntity) {
             glowHelper.addGlowing(receiver, 10);
+            messageAllPlayers("Attempted to add glowing. [Glowing][" + receiver.isGlowing() + "][UUID]["
+                    + receiver.getUniqueID() + "]");
             /*Minecraft mc = Minecraft.getInstance();
             if(mc.player != null) {
                 mc.player.sendChatMessage("[" + source.getTrueSource().getName().getUnformattedComponentText()
