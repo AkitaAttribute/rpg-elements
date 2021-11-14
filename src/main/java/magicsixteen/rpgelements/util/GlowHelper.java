@@ -11,9 +11,9 @@ public class GlowHelper {
     private static final Logger LOGGER = LogManager.getLogger();
     private HashMap<UUID, Long> glowingEntities = new HashMap<>();
     public void addGlowing(Entity entity, int seconds) {
-        entity.setGlowing(true);
         long moddedTimeStamp = getCurrentTimeStampPlusSeconds(seconds);
         glowingEntities.put(entity.getUniqueID(), moddedTimeStamp);
+        entity.setGlowing(true);
     }
 
     public boolean removeGlowing(Entity entity) {

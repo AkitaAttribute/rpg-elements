@@ -1,11 +1,13 @@
 package magicsixteen.rpgelements;
 
+import magicsixteen.rpgelements.events.item.ItemUpdateEvent;
 import magicsixteen.rpgelements.util.GlowHelper;
 import net.minecraft.block.Block;
 import net.minecraft.block.Blocks;
 import net.minecraft.client.Minecraft;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.item.ItemEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.item.Item;
@@ -17,6 +19,7 @@ import net.minecraft.util.text.ITextComponent;
 import net.minecraftforge.client.event.RenderWorldLastEvent;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.RegistryEvent;
+import net.minecraftforge.event.entity.item.ItemEvent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.event.entity.living.LivingDropsEvent;
 import net.minecraftforge.event.entity.living.LivingEvent;
@@ -227,5 +230,15 @@ public class RpgElements {
                         + entity.getUniqueID() + "]");
             }
         }
+    }
+
+    @SubscribeEvent
+    public void onNonLivingEntityUpdate(ItemUpdateEvent event) {
+
+    }
+
+    public static boolean onItemUpdate(ItemEntity entity)
+    {
+        return MinecraftForge.EVENT_BUS.post(new ItemUpdateEvent(entity));
     }
 }
