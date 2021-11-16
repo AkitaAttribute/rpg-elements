@@ -1,6 +1,7 @@
 package magicsixteen.rpgelements;
 
-import magicsixteen.rpgelements.events.item.ItemUpdateEvent;
+import com.google.gson.Gson;
+import magicsixteen.rpgelements.events.item.GlowingItemEntity;
 import magicsixteen.rpgelements.util.GlowHelper;
 import net.minecraft.block.Block;
 import net.minecraft.block.Blocks;
@@ -16,9 +17,11 @@ import net.minecraft.util.DamageSource;
 import net.minecraft.util.EntityDamageSource;
 import net.minecraft.util.math.RayTraceResult;
 import net.minecraft.util.text.ITextComponent;
+import net.minecraft.world.World;
 import net.minecraftforge.client.event.RenderWorldLastEvent;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.RegistryEvent;
+import net.minecraftforge.event.entity.EntityJoinWorldEvent;
 import net.minecraftforge.event.entity.item.ItemEvent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.event.entity.living.LivingDropsEvent;
@@ -39,11 +42,13 @@ import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.util.ConcurrentModificationException;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+import static magicsixteen.rpgelements.events.item.GlowingItemEntity.mapIeToGe;
 import static magicsixteen.rpgelements.util.MessagingHelper.messageAllPlayers;
 
 // The value here should match an entry in the META-INF/mods.toml file
@@ -52,6 +57,7 @@ public class RpgElements {
     // Directly reference a log4j logger.
     private static final Logger LOGGER = LogManager.getLogger();
     GlowHelper glowHelper = new GlowHelper();
+    boolean debug = false;
 
     public RpgElements() {
         // Register the setup method for modloading
@@ -107,8 +113,13 @@ public class RpgElements {
 
     @SubscribeEvent
     public void onLivingDrops(LivingDropsEvent event) {
-        for(Entity item : event.getDrops()) {
-            glowHelper.addGlowing(item, 30);
+        int glowDuration = 10;
+        if(event.getEntity() instanceof PlayerEntity) {
+            glowDuration = 600;
+        }
+        for(ItemEntity item : event.getDrops()) {
+            glowHelper.addGlowing(item, glowDuration);
+            messageAllPlayers("Attempted to add glowing. [Item][" + item + "][Glowing][" + item.isGlowing() + "]");
         }
     }
 
@@ -123,8 +134,10 @@ public class RpgElements {
 
         if(source.getTrueSource() instanceof PlayerEntity) {
             glowHelper.addGlowing(receiver, 10);
-            messageAllPlayers("Attempted to add glowing. [Glowing][" + receiver.isGlowing() + "][UUID]["
-                    + receiver.getUniqueID() + "]");
+            if(debug) {
+                messageAllPlayers("Attempted to add glowing. [Glowing][" + receiver.isGlowing() + "][UUID]["
+                        + receiver.getUniqueID() + "]");
+            }
             /*Minecraft mc = Minecraft.getInstance();
             if(mc.player != null) {
                 mc.player.sendChatMessage("[" + source.getTrueSource().getName().getUnformattedComponentText()
@@ -225,7 +238,6 @@ public class RpgElements {
         if(event.getEntityLiving().isGlowing()) {
             Entity entity = event.getEntityLiving();
             if (glowHelper.removeGlowing(entity)) {
-                entity.setGlowing(false);
                 messageAllPlayers("Attempted to remove glowing. [Glowing][" + entity.isGlowing() + "][UUID]["
                         + entity.getUniqueID() + "]");
             }
@@ -233,12 +245,24 @@ public class RpgElements {
     }
 
     @SubscribeEvent
-    public void onNonLivingEntityUpdate(ItemUpdateEvent event) {
-
-    }
-
-    public static boolean onItemUpdate(ItemEntity entity)
-    {
-        return MinecraftForge.EVENT_BUS.post(new ItemUpdateEvent(entity));
+    public void onEntityJoinedWorldEvent(EntityJoinWorldEvent event) {
+        CompletableFuture.runAsync(() -> {
+            if(event.getEntity() instanceof ItemEntity && !(event.getEntity() instanceof GlowingItemEntity)) {
+                ItemEntity entity = (ItemEntity) event.getEntity();
+                if(!entity.getItem().toString().contains("air")) {
+                    World world = entity.world;
+                    GlowingItemEntity gEntity = new GlowingItemEntity(entity, glowHelper);
+                    if(world.chunkExists(gEntity.chunkCoordX,gEntity.chunkCoordZ)) {
+                        event.setCanceled(true);
+                        gEntity = mapIeToGe(gEntity, entity);
+                        try {
+                            world.addEntity(gEntity);
+                        } catch (Exception e) {
+                            LOGGER.error("Unable to add entity?: " + e);
+                        }
+                    }
+                }
+            }
+        });
     }
 }

@@ -6,10 +6,11 @@ import org.apache.logging.log4j.Logger;
 
 import java.time.Instant;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class GlowHelper {
     private static final Logger LOGGER = LogManager.getLogger();
-    private HashMap<UUID, Long> glowingEntities = new HashMap<>();
+    private ConcurrentHashMap<UUID, Long> glowingEntities = new ConcurrentHashMap<>();
     public void addGlowing(Entity entity, int seconds) {
         long moddedTimeStamp = getCurrentTimeStampPlusSeconds(seconds);
         glowingEntities.put(entity.getUniqueID(), moddedTimeStamp);
@@ -23,8 +24,14 @@ public class GlowHelper {
             if(!glowingEntities.isEmpty()) {
                 if(glowingEntities.containsKey(uuid)) {
                     if (glowingEntities.get(uuid) < currentTimeStamp) {
-                        glowingEntities.remove(uuid);
-                        return true;
+                        entity.setGlowing(false);
+                        if(entity.isGlowing()) {
+                            return false;
+                        }
+                        else {
+                            glowingEntities.remove(uuid);
+                            return true;
+                        }
                     }
                 }
             }
