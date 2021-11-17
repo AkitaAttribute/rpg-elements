@@ -17,6 +17,7 @@ public class MessagingHelper {
             });
         } catch (Exception e) {
             LOGGER.error("Error sending message to players: [" + e + "]");
+            LOGGER.debug(message);
         }
     }
 }

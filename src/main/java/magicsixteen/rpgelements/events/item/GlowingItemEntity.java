@@ -6,6 +6,7 @@ import net.minecraft.entity.item.ItemEntity;
 import net.minecraft.world.World;
 
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 import static magicsixteen.rpgelements.util.MessagingHelper.messageAllPlayers;
 
@@ -28,7 +29,13 @@ public class GlowingItemEntity extends ItemEntity {
 
     @Override
     public void tick() {
+        //messageAllPlayers("We are ticking!");  //We are ticking :D
         if(this.isGlowing()) {
+            boolean isRegisteredGlowing = glowHelper.checkIfRegistered(this.getUniqueID());
+            if(!isRegisteredGlowing) {
+                messageAllPlayers("Unregistered glowing object.  Removing. [" + this.getItem() + "]");
+                this.setGlowing(false);
+            }
             if (glowHelper.removeGlowing(this)) {
                 //this.setDead();
                 /*entity.setPosition(this.getPosX(),this.getPosY(),this.getPosZ());
@@ -42,6 +49,16 @@ public class GlowingItemEntity extends ItemEntity {
         super.tick();
     }
 
+    public void addToWorld() {
+        CompletableFuture.runAsync(() -> {  //Do this garbage on another thread.
+            try {
+                this.world.addEntity(this);
+            } catch (Exception e) {
+                LOGGER.error("Unable to add entity?: " + e);
+            }
+        });
+    }
+
     public static GlowingItemEntity mapIeToGe(GlowingItemEntity gEntity, ItemEntity entity) {
         double px = entity.getPosX();
         double py = entity.getPosY();
@@ -51,13 +68,13 @@ public class GlowingItemEntity extends ItemEntity {
         gEntity.setMotion(entity.getMotion());
         gEntity.setGlowing(entity.isGlowing());
         gEntity.setInvisible(entity.isInvisible());
-        gEntity.setUniqueId(entity.getUniqueID());
+        gEntity.setUniqueId(UUID.randomUUID());  //Maybe needs to be random?  Maybe needs to be same as original?
         gEntity.setPosition(px, py, pz);
         gEntity.setCustomNameVisible(entity.isCustomNameVisible());
         gEntity.setAir(entity.getAir());
         gEntity.setBoundingBox(entity.getBoundingBox());
         gEntity.setDefaultPickupDelay();
-        gEntity.setEntityId(entity.getEntityId());
+        //gEntity.setEntityId(entity.getEntityId());
         gEntity.setFire(entity.getFireTimer());
         gEntity.setInvulnerable(entity.isInvulnerable());
         gEntity.setNoGravity(entity.hasNoGravity());
@@ -81,7 +98,7 @@ public class GlowingItemEntity extends ItemEntity {
         entity.setAir(gEntity.getAir());
         entity.setBoundingBox(gEntity.getBoundingBox());
         entity.setDefaultPickupDelay();
-        entity.setEntityId(gEntity.getEntityId());
+        //entity.setEntityId(gEntity.getEntityId());
         entity.setFire(gEntity.getFireTimer());
         entity.setInvulnerable(gEntity.isInvulnerable());
         entity.setNoGravity(gEntity.hasNoGravity());

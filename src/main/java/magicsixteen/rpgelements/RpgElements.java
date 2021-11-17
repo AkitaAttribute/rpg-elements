@@ -239,30 +239,26 @@ public class RpgElements {
             Entity entity = event.getEntityLiving();
             if (glowHelper.removeGlowing(entity)) {
                 messageAllPlayers("Attempted to remove glowing. [Glowing][" + entity.isGlowing() + "][UUID]["
-                        + entity.getUniqueID() + "]");
+                        + entity.getName().getUnformattedComponentText() + "]");
             }
         }
     }
 
     @SubscribeEvent
     public void onEntityJoinedWorldEvent(EntityJoinWorldEvent event) {
-        CompletableFuture.runAsync(() -> {
-            if(event.getEntity() instanceof ItemEntity && !(event.getEntity() instanceof GlowingItemEntity)) {
-                ItemEntity entity = (ItemEntity) event.getEntity();
-                if(!entity.getItem().toString().contains("air")) {
-                    World world = entity.world;
-                    GlowingItemEntity gEntity = new GlowingItemEntity(entity, glowHelper);
-                    if(world.chunkExists(gEntity.chunkCoordX,gEntity.chunkCoordZ)) {
-                        event.setCanceled(true);
-                        gEntity = mapIeToGe(gEntity, entity);
-                        try {
-                            world.addEntity(gEntity);
-                        } catch (Exception e) {
-                            LOGGER.error("Unable to add entity?: " + e);
-                        }
-                    }
+        if(event.getEntity() instanceof ItemEntity //Only do this if the entity is an item.
+                && !(event.getEntity() instanceof GlowingItemEntity)) {  //Only do this if we haven't done it before.
+            ItemEntity entity = (ItemEntity) event.getEntity();  //Verified item is cast into a new ItemEntity object so that we have method suggestions from IntelliJ.
+            if(!entity.getItem().toString().contains("air")) {  //Idk why, but lots of "air" spam was happening.  Just get that out of the way early.  We don't care about air.
+                World world = entity.world;  //Get current world from entity so that we can add it back.
+                GlowingItemEntity gEntity = new GlowingItemEntity(entity, glowHelper);  //Create new custom entity with a modified tick() function to allow us to track/modify aspects.
+                if(world.chunkExists(gEntity.chunkCoordX,gEntity.chunkCoordZ)) {  //Weird chunk check that is required to make this stuff work.
+                    event.setCanceled(true);  //Cancel original event such that we don't get the unmodified entity spawning. (duplication)
+                    gEntity = mapIeToGe(gEntity, entity);  //Map fields such that weird things don't happen.  Might be incomplete when it comes to nbt.  There is a better solution, I'm just not aware of it.
+                    glowHelper.updateGlowingRecord(entity, gEntity);  //Not 100% sure this is needed, but for now, I'm using it.
+                    gEntity.addToWorld();
                 }
             }
-        });
+        }
     }
 }
