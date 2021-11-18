@@ -1,11 +1,14 @@
 package magicsixteen.rpgelements;
 
+import com.google.gson.Gson;
+import magicsixteen.rpgelements.events.item.GlowingItemEntity;
 import magicsixteen.rpgelements.util.GlowHelper;
 import net.minecraft.block.Block;
 import net.minecraft.block.Blocks;
 import net.minecraft.client.Minecraft;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.item.ItemEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.item.Item;
@@ -14,9 +17,12 @@ import net.minecraft.util.DamageSource;
 import net.minecraft.util.EntityDamageSource;
 import net.minecraft.util.math.RayTraceResult;
 import net.minecraft.util.text.ITextComponent;
+import net.minecraft.world.World;
 import net.minecraftforge.client.event.RenderWorldLastEvent;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.RegistryEvent;
+import net.minecraftforge.event.entity.EntityJoinWorldEvent;
+import net.minecraftforge.event.entity.item.ItemEvent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.event.entity.living.LivingDropsEvent;
 import net.minecraftforge.event.entity.living.LivingEvent;
@@ -36,9 +42,9 @@ import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static magicsixteen.rpgelements.util.MessagingHelper.messageAllPlayers;
@@ -49,6 +55,7 @@ public class RpgElements {
     // Directly reference a log4j logger.
     private static final Logger LOGGER = LogManager.getLogger();
     GlowHelper glowHelper = new GlowHelper();
+    boolean debug = false;
 
     public RpgElements() {
         // Register the setup method for modloading
@@ -104,9 +111,35 @@ public class RpgElements {
 
     @SubscribeEvent
     public void onLivingDrops(LivingDropsEvent event) {
-        for(Entity item : event.getDrops()) {
-            glowHelper.addGlowing(item, 30);
+        int glowDuration = 10;
+        if(event.getEntity() instanceof PlayerEntity) {
+            glowDuration = 600;
         }
+        String drops = "";
+
+        ArrayList<ItemEntity> entities = new ArrayList<>(event.getDrops());
+        event.getDrops().clear();
+
+        ArrayList<GlowingItemEntity> gEntities = new ArrayList<>();
+
+        final int temp = glowDuration;
+        entities.forEach(item -> {
+            GlowingItemEntity gEntity = new GlowingItemEntity(item);
+            gEntity.setGlowingTick(temp);
+            gEntities.add(gEntity);
+        });
+
+        event.getDrops().addAll(gEntities);
+
+        /*for(ItemEntity item : event.getDrops()) {
+            drops = drops.concat("[" + item.getItem() + "]");
+            messageAllPlayers("Replacing drops. [Item][" + item.getItem().getItem() + "][Glowing][" + item.isGlowing() + "]");
+            GlowingItemEntity gEntity = new GlowingItemEntity(item);
+            gEntity.setGlowingTick(glowDuration);
+            event.getDrops().add(gEntity);
+            event.getDrops().remove(item);
+        }
+        messageAllPlayers(drops);*/
     }
 
     @SubscribeEvent
@@ -120,8 +153,10 @@ public class RpgElements {
 
         if(source.getTrueSource() instanceof PlayerEntity) {
             glowHelper.addGlowing(receiver, 10);
-            messageAllPlayers("Attempted to add glowing. [Glowing][" + receiver.isGlowing() + "][UUID]["
-                    + receiver.getUniqueID() + "]");
+            if(debug) {
+                messageAllPlayers("Attempted to add glowing. [Glowing][" + receiver.isGlowing() + "][UUID]["
+                        + receiver.getUniqueID() + "]");
+            }
             /*Minecraft mc = Minecraft.getInstance();
             if(mc.player != null) {
                 mc.player.sendChatMessage("[" + source.getTrueSource().getName().getUnformattedComponentText()
@@ -222,10 +257,8 @@ public class RpgElements {
         if(event.getEntityLiving().isGlowing()) {
             Entity entity = event.getEntityLiving();
             if (glowHelper.removeGlowing(entity)) {
-                entity.setGlowing(false);
-                //entity.set
                 messageAllPlayers("Attempted to remove glowing. [Glowing][" + entity.isGlowing() + "][UUID]["
-                        + entity.getUniqueID() + "]");
+                        + entity.getName().getUnformattedComponentText() + "]");
             }
         }
     }

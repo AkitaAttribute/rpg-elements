@@ -1,37 +1,45 @@
 package magicsixteen.rpgelements.util;
 
-import net.minecraft.client.Minecraft;
+import magicsixteen.rpgelements.events.item.GlowingItemEntity;
 import net.minecraft.entity.Entity;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.util.text.StringTextComponent;
-import net.minecraft.util.text.TextComponent;
-import net.minecraft.util.text.TranslationTextComponent;
-import net.minecraft.world.World;
+import net.minecraft.entity.item.ItemEntity;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static magicsixteen.rpgelements.util.MessagingHelper.messageAllPlayers;
 
 public class GlowHelper {
     private static final Logger LOGGER = LogManager.getLogger();
-    //private ArrayList<Entity> glowingEntities = new ArrayList<>();
     private HashMap<UUID, Long> glowingEntities = new HashMap<>();
-    private boolean thingsGlowing;
+    private HashMap<UUID, Integer> glowingTracker = new HashMap<>();
 
     public void addGlowing(Entity entity, int seconds) {
-        entity.setGlowing(true);
         long moddedTimeStamp = getCurrentTimeStampPlusSeconds(seconds);
-
-        //messageAllPlayers("Adding [" + entity.toString() + "]");
-        /*messageAllPlayers("Attempted to add glowing. [Glowing][" + entity.isGlowing() + "][UUID]["
-                + entity.getUniqueID() + "]");*/
         glowingEntities.put(entity.getUniqueID(), moddedTimeStamp);
+        entity.setGlowing(true);
+        messageAllPlayers("Tried to add glowing. [GlowingEntities][" +  glowingEntities.size() + "]");
+    }
+
+    public void addTracker(UUID uuid, int duration) {
+        glowingTracker.put(uuid, duration);
+    }
+
+    public int getDuration(UUID uuid) {
+        if(glowingTracker.containsKey(uuid)) {
+            int duration = glowingTracker.get(uuid);
+            try {
+                glowingTracker.remove(uuid);
+            }
+            catch (Exception e) {
+                LOGGER.error("Failed to remove?  Already Removed?:\t" + e);
+            }
+            return duration;
+        }
+        return 0;
     }
 
     public boolean removeGlowing(Entity entity) {
@@ -41,10 +49,15 @@ public class GlowHelper {
             if(!glowingEntities.isEmpty()) {
                 if(glowingEntities.containsKey(uuid)) {
                     if (glowingEntities.get(uuid) < currentTimeStamp) {
-                        //entity.setGlowing(false);
-                        //messageAllPlayers("Removing [" + entity.toString() + "]");
-                        glowingEntities.remove(uuid);
-                        return true;
+                        entity.setGlowing(false);
+                        if(entity.isGlowing()) {
+                            messageAllPlayers("Tried to remove glowing. [GlowingEntities][" +  glowingEntities.size() + "]");
+                            return false;
+                        }
+                        else {
+                            glowingEntities.remove(uuid);
+                            return true;
+                        }
                     }
                 }
             }
@@ -54,52 +67,25 @@ public class GlowHelper {
         return false;
     }
 
-    /*
-        While list has items in it, run.  If empty, stop the thread.  When added, check if thread is running.
-        When added, start glowing.  Thread is to check if time has passed every second.  Maybe in the future,
-        we can change it to check on x intervals where x is the length at which the entity is supposed to glow for.
-        This could make it more efficient.
-     */
-    /*private void doGlowing() {
-        thingsGlowing = true;
-        CompletableFuture.runAsync(() -> {
-            messageAllPlayers("Glowing thread started.");
-            String currentTimeStamp;
-            while (!glowingEntities.isEmpty()) {
-                currentTimeStamp = getCurrentTimeStamp();
-                try {
-                    List<Entity> entities = glowingEntities.get(currentTimeStamp);
-                    if(entities != null) {
-                        //messageAllPlayers("Glowing entities found: [" + entities.toString() + "]");
-                        String finalCurrentTimeStamp = currentTimeStamp;
-                        entities.forEach(entity -> {
-                            messageAllPlayers("Attempting to remove: [" + finalCurrentTimeStamp + "][" + entity.toString() + "]");
-                            try {
-
-                                Minecraft.getInstance().world.getEntityByID(entity.getEntityId()).setGlowing(false);
-                            } catch (Exception e) {
-                                messageAllPlayers("Error removing glowing from entity. [" + e.getMessage() + "]");
-                            }
-                            //entity.setGlowing(false);
-                            entities.remove(entity);
-                        });
-                    }
-                    TimeUnit.SECONDS.sleep(1);
-                } catch (InterruptedException e) {
-                    LOGGER.debug("Error sleeping:\t" + e);
-                }
-                //item.setGlowing(false);
-            }
-            thingsGlowing = false;
-            messageAllPlayers("Glowing thread completed.");
-        });
-    }*/
-
     private long getCurrentTimeStamp() {
         return Instant.now().getEpochSecond();
     }
 
     private long getCurrentTimeStampPlusSeconds(int seconds) {
         return Instant.now().plusSeconds(seconds).getEpochSecond();
+    }
+
+    public void updateGlowingRecord(ItemEntity rawEntity, GlowingItemEntity rawGEntitiy) {
+        UUID gEntitiy = rawGEntitiy.getUniqueID();
+        UUID entity = rawEntity.getUniqueID();
+        if(!glowingEntities.containsKey(gEntitiy) && glowingEntities.containsKey(entity)) {
+            messageAllPlayers("Key not found, manually swapping... [" + rawEntity.getItem() + "]->[" + rawGEntitiy.getItem() + "]");
+            glowingEntities.put(gEntitiy, glowingEntities.get(entity));
+            glowingEntities.remove(entity);
+        }
+    }
+
+    public boolean checkIfRegistered(UUID uuid) {
+        return glowingEntities.containsKey(uuid);
     }
 }
