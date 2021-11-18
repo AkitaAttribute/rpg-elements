@@ -15,11 +15,31 @@ import static magicsixteen.rpgelements.util.MessagingHelper.messageAllPlayers;
 public class GlowHelper {
     private static final Logger LOGGER = LogManager.getLogger();
     private HashMap<UUID, Long> glowingEntities = new HashMap<>();
+    private HashMap<UUID, Integer> glowingTracker = new HashMap<>();
+
     public void addGlowing(Entity entity, int seconds) {
         long moddedTimeStamp = getCurrentTimeStampPlusSeconds(seconds);
         glowingEntities.put(entity.getUniqueID(), moddedTimeStamp);
         entity.setGlowing(true);
         messageAllPlayers("Tried to add glowing. [GlowingEntities][" +  glowingEntities.size() + "]");
+    }
+
+    public void addTracker(UUID uuid, int duration) {
+        glowingTracker.put(uuid, duration);
+    }
+
+    public int getDuration(UUID uuid) {
+        if(glowingTracker.containsKey(uuid)) {
+            int duration = glowingTracker.get(uuid);
+            try {
+                glowingTracker.remove(uuid);
+            }
+            catch (Exception e) {
+                LOGGER.error("Failed to remove?  Already Removed?:\t" + e);
+            }
+            return duration;
+        }
+        return 0;
     }
 
     public boolean removeGlowing(Entity entity) {

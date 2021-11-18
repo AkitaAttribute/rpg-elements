@@ -42,13 +42,9 @@ import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.util.ConcurrentModificationException;
 import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-import static magicsixteen.rpgelements.events.item.GlowingItemEntity.mapIeToGe;
 import static magicsixteen.rpgelements.util.MessagingHelper.messageAllPlayers;
 
 // The value here should match an entry in the META-INF/mods.toml file
@@ -118,8 +114,15 @@ public class RpgElements {
             glowDuration = 600;
         }
         for(ItemEntity item : event.getDrops()) {
-            glowHelper.addGlowing(item, glowDuration);
-            messageAllPlayers("Attempted to add glowing. [Item][" + item + "][Glowing][" + item.isGlowing() + "]");
+            if(item instanceof GlowingItemEntity) {
+                ((GlowingItemEntity) item).setGlowingTick(glowDuration);
+                item.setGlowing(true);
+                messageAllPlayers("Attempted to add glowing. [Item][" + item.getItem().getItem() + "][Glowing][" + item.isGlowing() + "]");
+            }
+            else {
+                messageAllPlayers("Added Glowing Tracker. [Item][" + item.getItem().getItem() + "][Glowing][" + item.isGlowing() + "]");
+                glowHelper.addTracker(item.getUniqueID(), glowDuration);
+            }
         }
     }
 
@@ -249,13 +252,15 @@ public class RpgElements {
         if(event.getEntity() instanceof ItemEntity //Only do this if the entity is an item.
                 && !(event.getEntity() instanceof GlowingItemEntity)) {  //Only do this if we haven't done it before.
             ItemEntity entity = (ItemEntity) event.getEntity();  //Verified item is cast into a new ItemEntity object so that we have method suggestions from IntelliJ.
-            if(!entity.getItem().toString().contains("air")) {  //Idk why, but lots of "air" spam was happening.  Just get that out of the way early.  We don't care about air.
+            if(!entity.getItem().isEmpty()) {  //Idk why, but lots of "air" spam was happening.  Just get that out of the way early.  We don't care about air.
                 World world = entity.world;  //Get current world from entity so that we can add it back.
-                GlowingItemEntity gEntity = new GlowingItemEntity(entity, glowHelper);  //Create new custom entity with a modified tick() function to allow us to track/modify aspects.
+                GlowingItemEntity gEntity = new GlowingItemEntity(entity);  //Create new custom entity with a modified tick() function to allow us to track/modify aspects.
+                gEntity.setGlowingTick(glowHelper.getDuration(gEntity.getUniqueID()));
+                if(gEntity.getGlowingTick() > 0) {
+                    messageAllPlayers("Attempted to add glowing. [Item][" + gEntity.getItem().getItem() + "][Glowing][" + gEntity.isGlowing() + "]");
+                }
                 if(world.chunkExists(gEntity.chunkCoordX,gEntity.chunkCoordZ)) {  //Weird chunk check that is required to make this stuff work.
                     event.setCanceled(true);  //Cancel original event such that we don't get the unmodified entity spawning. (duplication)
-                    gEntity = mapIeToGe(gEntity, entity);  //Map fields such that weird things don't happen.  Might be incomplete when it comes to nbt.  There is a better solution, I'm just not aware of it.
-                    glowHelper.updateGlowingRecord(entity, gEntity);  //Not 100% sure this is needed, but for now, I'm using it.
                     gEntity.addToWorld();
                 }
             }

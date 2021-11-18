@@ -1,49 +1,38 @@
 package magicsixteen.rpgelements.events.item;
 
-import lombok.Builder;
-import magicsixteen.rpgelements.util.GlowHelper;
 import net.minecraft.entity.item.ItemEntity;
 import net.minecraft.world.World;
 
+import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 import static magicsixteen.rpgelements.util.MessagingHelper.messageAllPlayers;
 
-@Builder
 public class GlowingItemEntity extends ItemEntity {
-    ItemEntity entity;
-    GlowHelper glowHelper;
+    int glowingTick = 0;
 
-    public GlowingItemEntity(World worldIn, double x, double y, double z, GlowHelper glowHelper) {
+    public GlowingItemEntity(World worldIn, double x, double y, double z) {
         super(worldIn, x, y, z);
-        this.entity = new ItemEntity(this.world, this.getPosX(), this.getPosY(), this.getPosZ());
-        this.glowHelper = glowHelper;
     }
 
-    public GlowingItemEntity(ItemEntity entity, GlowHelper glowHelper) {
+    public GlowingItemEntity(ItemEntity entity) {
         super(entity.world, entity.getPosX(), entity.getPosY(), entity.getPosZ());
-        this.entity = entity;
-        this.glowHelper = glowHelper;
+        this.setItem(entity.getItem().copy());
+        this.copyLocationAndAnglesFrom(entity);
     }
 
     @Override
     public void tick() {
-        //messageAllPlayers("We are ticking!");  //We are ticking :D
         if(this.isGlowing()) {
-            boolean isRegisteredGlowing = glowHelper.checkIfRegistered(this.getUniqueID());
-            if(!isRegisteredGlowing) {
-                messageAllPlayers("Unregistered glowing object.  Removing. [" + this.getItem() + "]");
+            if(glowingTick < 0) {
                 this.setGlowing(false);
+                messageAllPlayers("Tried to remove glowing. [GlowingEntities][" +
+                        Objects.requireNonNull(this.getItem().getItem().getRegistryName()).getNamespace() +
+                        "]");
             }
-            if (glowHelper.removeGlowing(this)) {
-                //this.setDead();
-                /*entity.setPosition(this.getPosX(),this.getPosY(),this.getPosZ());
-                entity.setItem(this.getItem());*/
-                //entity.getItem().setCount(this.getItem().getCount());
-                //entity = mapGeToIe(this, entity);
-                //this.world.addEntity(entity);
-                messageAllPlayers("Attempted to remove glowing. [Item][" + this.getItem() + "][Glowing][" + this.isGlowing() + "]");
+            else {
+                glowingTick --;
             }
         }
         super.tick();
@@ -57,6 +46,17 @@ public class GlowingItemEntity extends ItemEntity {
                 LOGGER.error("Unable to add entity?: " + e);
             }
         });
+    }
+
+    public void setGlowingTick(int glowingTick) {
+        if(glowingTick > 0) {
+            this.setGlowing(true);
+        }
+        this.glowingTick = glowingTick;
+    }
+
+    public int getGlowingTick() {
+        return glowingTick;
     }
 
     public static GlowingItemEntity mapIeToGe(GlowingItemEntity gEntity, ItemEntity entity) {
