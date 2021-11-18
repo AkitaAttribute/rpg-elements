@@ -42,6 +42,8 @@ import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
@@ -113,17 +115,31 @@ public class RpgElements {
         if(event.getEntity() instanceof PlayerEntity) {
             glowDuration = 600;
         }
-        for(ItemEntity item : event.getDrops()) {
-            if(item instanceof GlowingItemEntity) {
-                ((GlowingItemEntity) item).setGlowingTick(glowDuration);
-                item.setGlowing(true);
-                messageAllPlayers("Attempted to add glowing. [Item][" + item.getItem().getItem() + "][Glowing][" + item.isGlowing() + "]");
-            }
-            else {
-                messageAllPlayers("Added Glowing Tracker. [Item][" + item.getItem().getItem() + "][Glowing][" + item.isGlowing() + "]");
-                glowHelper.addTracker(item.getUniqueID(), glowDuration);
-            }
+        String drops = "";
+
+        ArrayList<ItemEntity> entities = new ArrayList<>(event.getDrops());
+        event.getDrops().clear();
+
+        ArrayList<GlowingItemEntity> gEntities = new ArrayList<>();
+
+        final int temp = glowDuration;
+        entities.forEach(item -> {
+            GlowingItemEntity gEntity = new GlowingItemEntity(item);
+            gEntity.setGlowingTick(temp);
+            gEntities.add(gEntity);
+        });
+
+        event.getDrops().addAll(gEntities);
+
+        /*for(ItemEntity item : event.getDrops()) {
+            drops = drops.concat("[" + item.getItem() + "]");
+            messageAllPlayers("Replacing drops. [Item][" + item.getItem().getItem() + "][Glowing][" + item.isGlowing() + "]");
+            GlowingItemEntity gEntity = new GlowingItemEntity(item);
+            gEntity.setGlowingTick(glowDuration);
+            event.getDrops().add(gEntity);
+            event.getDrops().remove(item);
         }
+        messageAllPlayers(drops);*/
     }
 
     @SubscribeEvent
@@ -243,26 +259,6 @@ public class RpgElements {
             if (glowHelper.removeGlowing(entity)) {
                 messageAllPlayers("Attempted to remove glowing. [Glowing][" + entity.isGlowing() + "][UUID]["
                         + entity.getName().getUnformattedComponentText() + "]");
-            }
-        }
-    }
-
-    @SubscribeEvent
-    public void onEntityJoinedWorldEvent(EntityJoinWorldEvent event) {
-        if(event.getEntity() instanceof ItemEntity //Only do this if the entity is an item.
-                && !(event.getEntity() instanceof GlowingItemEntity)) {  //Only do this if we haven't done it before.
-            ItemEntity entity = (ItemEntity) event.getEntity();  //Verified item is cast into a new ItemEntity object so that we have method suggestions from IntelliJ.
-            if(!entity.getItem().isEmpty()) {  //Idk why, but lots of "air" spam was happening.  Just get that out of the way early.  We don't care about air.
-                World world = entity.world;  //Get current world from entity so that we can add it back.
-                GlowingItemEntity gEntity = new GlowingItemEntity(entity);  //Create new custom entity with a modified tick() function to allow us to track/modify aspects.
-                gEntity.setGlowingTick(glowHelper.getDuration(gEntity.getUniqueID()));
-                if(gEntity.getGlowingTick() > 0) {
-                    messageAllPlayers("Attempted to add glowing. [Item][" + gEntity.getItem().getItem() + "][Glowing][" + gEntity.isGlowing() + "]");
-                }
-                if(world.chunkExists(gEntity.chunkCoordX,gEntity.chunkCoordZ)) {  //Weird chunk check that is required to make this stuff work.
-                    event.setCanceled(true);  //Cancel original event such that we don't get the unmodified entity spawning. (duplication)
-                    gEntity.addToWorld();
-                }
             }
         }
     }
