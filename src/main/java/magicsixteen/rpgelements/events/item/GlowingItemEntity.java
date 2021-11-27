@@ -1,10 +1,11 @@
 package magicsixteen.rpgelements.events.item;
 
+import net.minecraft.client.renderer.IRenderTypeBuffer;
+import net.minecraft.client.renderer.OutlineLayerBuffer;
+import net.minecraft.client.renderer.RenderTypeBuffers;
 import net.minecraft.entity.item.ItemEntity;
 
 import java.time.Instant;
-import java.util.Objects;
-import static magicsixteen.rpgelements.util.MessagingHelper.messageAllPlayers;
 
 public class GlowingItemEntity extends ItemEntity {
     long duration = 0;
@@ -20,9 +21,6 @@ public class GlowingItemEntity extends ItemEntity {
         if(this.isGlowing()) {
             if(duration < getCurrentTimeStamp()) {
                 this.setGlowing(false);
-                messageAllPlayers("Tried to remove glowing. [GlowingEntities][" +
-                        Objects.requireNonNull(this.getItem().getItem().getRegistryName()).getPath() +
-                        "]");
             }
         }
         super.tick();
@@ -42,4 +40,22 @@ public class GlowingItemEntity extends ItemEntity {
     private long getCurrentTimeStampPlusSeconds(int seconds) {
         return Instant.now().plusSeconds(seconds).getEpochSecond();
     }
+
+    /*private void changeGlowColor() {
+        IRenderTypeBuffer irendertypebuffer;
+        if (this.isGlowing()) {
+            OutlineLayerBuffer outlinelayerbuffer = new OutlineLayerBuffer();
+            irendertypebuffer = outlinelayerbuffer;
+            int i2 = entity.getTeamColor();
+            int j2 = 255;
+            int k2 = i2 >> 16 & 255;
+            int l2 = i2 >> 8 & 255;
+            int i3 = i2 & 255;
+            outlinelayerbuffer.setColor(k2, l2, i3, 255);
+        } else {
+            irendertypebuffer = irendertypebuffer$impl;
+        }
+
+        this.renderEntity(entity, d0, d1, d2, partialTicks, matrixStackIn, irendertypebuffer);
+    }*/
 }

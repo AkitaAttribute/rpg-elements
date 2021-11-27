@@ -1,35 +1,30 @@
 package magicsixteen.rpgelements;
 
-import com.google.gson.Gson;
+import magicsixteen.rpgelements.enchantments.GlowingEnchantment;
 import magicsixteen.rpgelements.events.item.GlowingItemEntity;
+import magicsixteen.rpgelements.registry.EnchantmentRegistry;
 import magicsixteen.rpgelements.util.GlowHelper;
 import net.minecraft.block.Block;
 import net.minecraft.block.Blocks;
 import net.minecraft.client.Minecraft;
+import net.minecraft.enchantment.Enchantment;
+import net.minecraft.enchantment.EnchantmentType;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.item.ItemEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.ServerPlayerEntity;
+import net.minecraft.inventory.EquipmentSlotType;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.DamageSource;
 import net.minecraft.util.EntityDamageSource;
-import net.minecraft.util.math.RayTraceResult;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.world.World;
-import net.minecraftforge.client.event.RenderWorldLastEvent;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.RegistryEvent;
-import net.minecraftforge.event.entity.EntityJoinWorldEvent;
-import net.minecraftforge.event.entity.item.ItemEvent;
-import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.event.entity.living.LivingDropsEvent;
 import net.minecraftforge.event.entity.living.LivingEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
-import net.minecraftforge.event.entity.player.AttackEntityEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
-import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.InterModComms;
 import net.minecraftforge.fml.common.Mod;
@@ -39,11 +34,12 @@ import net.minecraftforge.fml.event.lifecycle.InterModEnqueueEvent;
 import net.minecraftforge.fml.event.lifecycle.InterModProcessEvent;
 import net.minecraftforge.fml.event.server.FMLServerStartingEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraftforge.registries.IForgeRegistry;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
@@ -71,6 +67,7 @@ public class RpgElements {
 
         // Register ourselves for server and other game events we are interested in
         MinecraftForge.EVENT_BUS.register(this);
+        EnchantmentRegistry.ENCHANTMENT.register(FMLJavaModLoadingContext.get().getModEventBus());
     }
 
     @SubscribeEvent
@@ -115,7 +112,6 @@ public class RpgElements {
         if(event.getEntity() instanceof PlayerEntity) {
             glowDuration = 600;
         }
-        String drops = "";
 
         ArrayList<ItemEntity> entities = new ArrayList<>(event.getDrops());
         event.getDrops().clear();
@@ -130,16 +126,6 @@ public class RpgElements {
         });
 
         event.getDrops().addAll(gEntities);
-
-        /*for(ItemEntity item : event.getDrops()) {
-            drops = drops.concat("[" + item.getItem() + "]");
-            messageAllPlayers("Replacing drops. [Item][" + item.getItem().getItem() + "][Glowing][" + item.isGlowing() + "]");
-            GlowingItemEntity gEntity = new GlowingItemEntity(item);
-            gEntity.setGlowingTick(glowDuration);
-            event.getDrops().add(gEntity);
-            event.getDrops().remove(item);
-        }
-        messageAllPlayers(drops);*/
     }
 
     @SubscribeEvent
@@ -152,11 +138,13 @@ public class RpgElements {
         float healthAfterDamage = (receiver.getHealth() - event.getAmount());
 
         if(source.getTrueSource() instanceof PlayerEntity) {
-            glowHelper.addGlowing(receiver, 10);
+            /*glowHelper.addGlowing(receiver, 10);
             if(debug) {
                 messageAllPlayers("Attempted to add glowing. [Glowing][" + receiver.isGlowing() + "][UUID]["
                         + receiver.getUniqueID() + "]");
-            }
+            }*/
+
+
             /*Minecraft mc = Minecraft.getInstance();
             if(mc.player != null) {
                 mc.player.sendChatMessage("[" + source.getTrueSource().getName().getUnformattedComponentText()
@@ -262,4 +250,20 @@ public class RpgElements {
             }
         }
     }
+
+    /*@SubscribeEvent
+    public static void onRegisterEnchantment(RegistryEvent.Register<Enchantment> event)
+    {
+        LOGGER.debug("Uhhh, can we get this event going?");
+        try {
+            ForgeRegistries.ENCHANTMENTS.register(new GlowingEnchantment(Enchantment.Rarity.COMMON,
+                    EnchantmentType.WEAPON,
+                    new EquipmentSlotType[]{EquipmentSlotType.MAINHAND, EquipmentSlotType.OFFHAND}));
+
+            LOGGER.debug("Attempted to register Glowing Enchantment.");
+        }
+        catch (Exception e) {
+            LOGGER.error("Unable to register enchantment:\t" + e);
+        }
+    }*/
 }
