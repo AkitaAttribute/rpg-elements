@@ -1,13 +1,13 @@
 package magicsixteen.rpgelements;
 
-import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.world.entity.player.Player;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 
 class RpgElementsTest {
     PlayerEvent playerEvent;
-    PlayerEntity playerEntity;
+    Player playerEntity;
 
     @BeforeEach
     void setup() {

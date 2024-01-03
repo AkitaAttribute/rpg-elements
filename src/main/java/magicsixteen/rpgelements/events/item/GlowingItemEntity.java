@@ -1,9 +1,11 @@
 package magicsixteen.rpgelements.events.item;
 
-import net.minecraft.client.renderer.IRenderTypeBuffer;
-import net.minecraft.client.renderer.OutlineLayerBuffer;
-import net.minecraft.client.renderer.RenderTypeBuffers;
-import net.minecraft.entity.item.ItemEntity;
+//import net.minecraft.client.renderer.IRenderTypeBuffer;
+//import net.minecraft.client.renderer.OutlineLayerBuffer;
+//import net.minecraft.client.renderer.RenderTypeBuffers;
+//import net.minecraft.entity.item.ItemEntity;
+
+import net.minecraft.world.entity.item.ItemEntity;
 
 import java.time.Instant;
 
@@ -11,16 +13,17 @@ public class GlowingItemEntity extends ItemEntity {
     long duration = 0;
 
     public GlowingItemEntity(ItemEntity entity) {
-        super(entity.world, entity.getPosX(), entity.getPosY(), entity.getPosZ());
-        this.setItem(entity.getItem().copy());
-        this.copyLocationAndAnglesFrom(entity);
+        super(entity.level(), entity.getX(), entity.getY(), entity.getZ(), entity.getItem());
+//        super(entity.world, entity.getPosX(), entity.getPosY(), entity.getPosZ());
+//        this.setItem(entity.getItem().copy());
+//        this.copyLocationAndAnglesFrom(entity);
     }
 
     @Override
     public void tick() {
-        if(this.isGlowing()) {
+        if(this.isCurrentlyGlowing()) {
             if(duration < getCurrentTimeStamp()) {
-                this.setGlowing(false);
+                this.setGlowingTag(false);
             }
         }
         super.tick();
@@ -28,7 +31,7 @@ public class GlowingItemEntity extends ItemEntity {
 
     public void setGlowingTick(int duration) {
         if(duration > 0) {
-            this.setGlowing(true);
+            this.setGlowingTag(true);
         }
         this.duration = getCurrentTimeStampPlusSeconds(duration);
     }

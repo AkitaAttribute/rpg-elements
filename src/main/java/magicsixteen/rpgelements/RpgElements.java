@@ -4,27 +4,37 @@ import magicsixteen.rpgelements.enchantments.GlowingEnchantment;
 import magicsixteen.rpgelements.events.item.GlowingItemEntity;
 import magicsixteen.rpgelements.registry.EnchantmentRegistry;
 import magicsixteen.rpgelements.util.GlowHelper;
-import net.minecraft.block.Block;
-import net.minecraft.block.Blocks;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerEntity;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.damagesource.DamageType;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.client.Minecraft;
-import net.minecraft.enchantment.Enchantment;
-import net.minecraft.enchantment.EnchantmentType;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.item.ItemEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.player.ServerPlayerEntity;
-import net.minecraft.inventory.EquipmentSlotType;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.DamageSource;
-import net.minecraft.util.EntityDamageSource;
+import net.minecraft.world.item.enchantment.Enchantment;
+import net.minecraft.world.item.enchantment.Enchantments;
+import net.minecraft.world.level.entity.ChunkEntities;
+import net.minecraft.world.entity.LivingEntity;
+//import net.minecraft.entity.item.ItemEntity;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.player.Player;
+//import net.minecraft.entity.player.PlayerEntity;
+//import net.minecraft.entity.player.ServerPlayerEntity;
+//import net.minecraft.inventory.EquipmentSlotType;
+//import net.minecraft.item.Item;
+//import net.minecraft.item.ItemStack;
+//import net.minecraft.util.DamageSource;
+//import net.minecraft.util.EntityDamageSource;
 import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.event.RegistryEvent;
+//import net.minecraftforge.event.RegistryEvent;
 import net.minecraftforge.event.entity.living.LivingDropsEvent;
 import net.minecraftforge.event.entity.living.LivingEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
+import net.minecraftforge.event.server.ServerStartingEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.InterModComms;
 import net.minecraftforge.fml.common.Mod;
@@ -32,7 +42,7 @@ import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.event.lifecycle.InterModEnqueueEvent;
 import net.minecraftforge.fml.event.lifecycle.InterModProcessEvent;
-import net.minecraftforge.fml.event.server.FMLServerStartingEvent;
+//import net.minecraftforge.fml.event.server.FMLServerStartingEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.IForgeRegistry;
@@ -46,11 +56,11 @@ import java.util.stream.Collectors;
 import static magicsixteen.rpgelements.util.MessagingHelper.messageAllPlayers;
 
 // The value here should match an entry in the META-INF/mods.toml file
-@Mod("rpg-elements")
+@Mod("rpg_elements")
 public class RpgElements {
     // Directly reference a log4j logger.
     private static final Logger LOGGER = LogManager.getLogger();
-    GlowHelper glowHelper = new GlowHelper();
+    GlowHelper glowHelper = GlowHelper.getInstance();
     boolean debug = false;
 
     public RpgElements() {
@@ -72,21 +82,28 @@ public class RpgElements {
 
     @SubscribeEvent
     public void onPlayerLogin(PlayerEvent.PlayerLoggedInEvent event) {
-        PlayerEntity player = event.getPlayer();
-        String playerName = player.getName().getUnformattedComponentText();
+        Player player = event.getEntity();
+        String playerName = player.getName().getString();
         try {
             Minecraft mc = Minecraft.getInstance();
-            mc.player.sendChatMessage("Welcome! [" + playerName + "]");
+            if (mc.player != null) {
+                mc.player.sendSystemMessage(sendSystemChat("Welcome! [" + playerName + "]"));
+            }
+            //mc.player.sendChatMessage("Welcome! [" + playerName + "]");
         } catch (Exception e) {
             LOGGER.info("Hmm, we had an issue:\t" + e);
         }
         LOGGER.info("[" + playerName + "] has logged in game.");
     }
 
+    public Component sendSystemChat(String message) {
+        return Component.nullToEmpty(message);
+    }
+
     @SubscribeEvent
     public void onPlayerCraft(PlayerEvent.ItemCraftedEvent event) {
         ItemStack item = event.getCrafting();
-        if(item.isDamageable()) {
+        if(item.isDamageableItem()) {
             //item.;
         }
     }
@@ -109,7 +126,7 @@ public class RpgElements {
     @SubscribeEvent
     public void onLivingDrops(LivingDropsEvent event) {
         int glowDuration = 10;
-        if(event.getEntity() instanceof PlayerEntity) {
+        if(event.getEntity() instanceof Player) {
             glowDuration = 600;
         }
 
@@ -130,14 +147,14 @@ public class RpgElements {
 
     @SubscribeEvent
     public void onLivingHurt(LivingHurtEvent event) {
-        DamageSource unknownSource, source = new EntityDamageSource("The Planet", event.getEntity());
+        DamageSource unknownSource, source = new DamageSource(event.getSource().typeHolder(), event.getEntity());
         if(event.getSource() != null) {
             source = event.getSource();
         }
         LivingEntity receiver = (LivingEntity) event.getEntity();
         float healthAfterDamage = (receiver.getHealth() - event.getAmount());
 
-        if(source.getTrueSource() instanceof PlayerEntity) {
+        if(source.getEntity() instanceof Player) {
             /*glowHelper.addGlowing(receiver, 10);
             if(debug) {
                 messageAllPlayers("Attempted to add glowing. [Glowing][" + receiver.isGlowing() + "][UUID]["
@@ -153,7 +170,7 @@ public class RpgElements {
             }*/
         }
 
-        if(receiver instanceof PlayerEntity) {
+        if(receiver instanceof Player) {
             /*Minecraft mc = Minecraft.getInstance();
             if(mc.player != null) {
                 if(source.getTrueSource() == null) {
@@ -180,14 +197,14 @@ public class RpgElements {
         String itemPath = "";
         Item item = itemStack.getItem(); //Somehow translates to the item name (minecraft:sand is "sand" here)
         try {
-            itemNamespace = Objects.requireNonNull(item.getRegistryName()).getNamespace();
-            itemPath = Objects.requireNonNull(item.getRegistryName()).getPath();
+            itemNamespace = Objects.requireNonNull(item.getDescriptionId());
+            itemPath = Objects.requireNonNull(item.getDescription().getString());
         } catch (Exception e) {
             LOGGER.info("Unable to get item namespace or path.");
         }
         String itemId = itemNamespace + ":" + itemPath;
-        ServerPlayerEntity player = (ServerPlayerEntity) event.getPlayer();
-        String playerName = player.getName().getUnformattedComponentText();  //Just player name.
+        Player player = event.getEntity();
+        String playerName = player.getName().getString();  //Just player name.
 
         Minecraft mc = Minecraft.getInstance();
         if(mc.player != null) {
@@ -199,17 +216,18 @@ public class RpgElements {
     private void setup(final FMLCommonSetupEvent event) {
         // some preinit code
         LOGGER.info("HELLO FROM PREINIT");
-        LOGGER.info("DIRT BLOCK >> {}", Blocks.DIRT.getRegistryName());
+        LOGGER.info("DIRT BLOCK >> {}", ForgeRegistries.BLOCKS.getKey(Blocks.DIRT));
     }
 
     private void doClientStuff(final FMLClientSetupEvent event) {
         // do something that can only be done on the client
-        LOGGER.info("Got game settings {}", event.getMinecraftSupplier().get().gameSettings);
+        //LOGGER.info("Got game settings {}", event.getMinecraftSupplier().get().gameSettings);
+        LOGGER.info("MINECRAFT NAME >> {}", Minecraft.getInstance().getUser().getName());
     }
 
     private void enqueueIMC(final InterModEnqueueEvent event) {
         // some example code to dispatch IMC to another mod
-        InterModComms.sendTo("rpg-elements", "helloworld", () -> {
+        InterModComms.sendTo("rpg_elements", "helloworld", () -> {
             LOGGER.info("Hello world from the MDK");
             return "Hello world";
         });
@@ -224,29 +242,34 @@ public class RpgElements {
 
     // You can use SubscribeEvent and let the Event Bus discover methods to call
     @SubscribeEvent
-    public void onServerStarting(FMLServerStartingEvent event) {
+    public void onServerStarting(ServerStartingEvent event) {
         // do something when the server starts
         LOGGER.info("HELLO from server starting");
     }
 
     // You can use EventBusSubscriber to automatically subscribe events on the contained class (this is subscribing to the MOD
     // Event bus for receiving Registry Events)
-    @Mod.EventBusSubscriber(bus = Mod.EventBusSubscriber.Bus.MOD)
-    public static class RegistryEvents {
-        @SubscribeEvent
-        public static void onBlocksRegistry(final RegistryEvent.Register<Block> blockRegistryEvent) {
-            // register a new block here
-            LOGGER.info("HELLO from Register Block");
-        }
-    }
+//    @Mod.EventBusSubscriber(bus = Mod.EventBusSubscriber.Bus.MOD)
+//    public static class RegistryEvents {
+//        @SubscribeEvent
+//        public static void onBlocksRegistry(final RegistryEvent.Register<Block> blockRegistryEvent) {
+//            // register a new block here
+//            LOGGER.info("HELLO from Register Block");
+//        }
+//    }
 
     @SubscribeEvent
-    public void onLivingEntityUpdate(LivingEvent.LivingUpdateEvent event) {
-        if(event.getEntityLiving().isGlowing()) {
-            Entity entity = event.getEntityLiving();
-            if (glowHelper.removeGlowing(entity)) {
-                messageAllPlayers("Attempted to remove glowing. [Glowing][" + entity.isGlowing() + "][UUID]["
-                        + entity.getName().getUnformattedComponentText() + "]");
+    public void onLivingEntityUpdate(LivingEvent.LivingTickEvent event) {
+        if(event.getEntity() != null) {
+            if (event.getEntity().isCurrentlyGlowing()) {
+                //messageAllPlayers("Ticking glowing entities found.");
+                //event.getEntity().setGlowingTag(false);
+                glowHelper.removeGlowing(event.getEntity());
+//                boolean result = glowHelper.removeGlowing(event.getEntity());
+//                if (result) {
+//                    messageAllPlayers("Attempted to remove glowing. [Glowing][" + event.getEntity().isCurrentlyGlowing() + "][UUID]["
+//                            + event.getEntity().getName().getString() + "]");
+//                }
             }
         }
     }
